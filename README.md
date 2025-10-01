@@ -11,13 +11,13 @@ but those IDE-centered workflows depend on the IDE version number and are not fl
 
 The [default setting][default-fuse-bits] is F_CPU=16500000 and all the pins of the port B are set to the output pins, this even includes the reset pin [PB5][datasheet]!
 
-1. Install gcc-avr tool chain:
+### Install gcc-avr tool chain:
 
 ```console
 sudo apt-get install gcc build-essential gcc-avr binutils-avr avr-libc gdb-avr avrdude libusb-dev
 ```
 
-2. Install micronucleus:
+### Install micronucleus:
 
 ```console
 git clone https://github.com/micronucleus/micronucleus.git
@@ -31,79 +31,82 @@ Add this line to .bashrc (note your path to micronucleus, mine is /home/tokyo/):
 export PATH=$PATH:/home/tokyo/micronucleus/commandline
 ```
 
-3. Modify Makefile (see the sample file) or simply execute the following to flash the code:
+### Workflow:
+
+#### Once (with USBasp or ISP):
+
+Flash Micronucleus bootloader t85_default.hex.
+
+Set the correct fuse values.
+
+This establishes the board as a "Digispark". See 5. Updating Micronucleus.
+
+#### Afterwards:
+
+Use Micronucleus over USB to upload code:
+
+```console
+make clean
+make
+make install
+```
+
+or simply upload main.hex if you have obtained it by other means:
 
 ```console
 sudo -E env "PATH=$PATH" micronucleus --run main.hex
 ```
 
-4. Workflow:
+The fuses remain as they were (you don’t touch them again).
 
-    4.1 Once (with USBasp or ISP):
+In the included Makefile, ```make install``` runs sudo with the environment PATH borrowed from the user space 
+so that the micronucleus program becomes visible.
 
-    Flash Micronucleus bootloader t85_default.hex.
+The promt issues
 
-    Set the correct fuse values.
-    
-    This establishes the board as a "Digispark". See 5. Updating Micronucleus.
+```console
+> Please plug in the device ...
+```
 
-    4.2 Afterwards:
+and one then needs to unplug and plug the board to USB port again before succeeding:
 
-    Use Micronucleus over USB to upload code:
-    
-    ```console
-    make clean
-    make
-    make install
-    ```
+```console 
+> Device is found!
+connecting: 33% complete
+> Device has firmware version 1.6
+> Available space for user applications: 6012 bytes
+> Suggested sleep time between sending pages: 8ms
+> Whole page count: 94  page size: 64
+> Erase function sleep duration: 752ms
+parsing: 50% complete
+> Erasing the memory ...
+erasing: 66% complete
+> Starting to upload ...
+writing: 83% complete
+> Starting the user app ...
+running: 100% complete
+>> Micronucleus done. Thank you!
+```
 
-    The fuses remain as they were (you don’t touch them again).
+A sample code is included in this folder, see also [this minimal complete example][minimal-code].
 
-    In the included Makefile, ```make install``` runs sudo with the environment PATH borrowed from the user space 
-    so that the micronucleus program becomes visible.
+Execute ```lsusb``` to check if the board is still visible on the USB port. If not, update/upload Micronucleus as shown below. 
 
-    The promt issues
+![gThumb](attiny85-blinking.jpg "Digispark ATtiny85")
 
-    ```console
-    > Please plug in the device ...
-    ```
+### Updating Micronucleus
 
-    and one then needs to unplug and plug the board to USB port again before succeeding:
-
-    ```console 
-    > Device is found!
-    connecting: 33% complete
-    > Device has firmware version 1.6
-    > Available space for user applications: 6012 bytes
-    > Suggested sleep time between sending pages: 8ms
-    > Whole page count: 94  page size: 64
-    > Erase function sleep duration: 752ms
-    parsing: 50% complete
-    > Erasing the memory ...
-    erasing: 66% complete
-    > Starting to upload ...
-    writing: 83% complete
-    > Starting the user app ...
-    running: 100% complete
-    >> Micronucleus done. Thank you!
-    ```
-
-    Sometimes it is also useful to run ```lsusb``` command to see if the device is seen on the USB port. 
-    A sample code is included in this folder, see also [this minimal complete example][minimal-code].
-
-    ![gThumb](attiny85-blinking.jpg "Digispark ATtiny85")
-
-5. Updating Micronucleus
-
-One problem with this board is that in order to update the Micronucleus bootloader, one still needs to wire an external ISP programmer such as USBasp to the corresponding pins MISO, MOSI, SCK and RESET. In order to update it:
+One problem with this board is that in order to update Micronucleus (bootloader), one still needs to wire an external ISP programmer such as USBasp to the corresponding pins MISO, MOSI, SCK and RESET. In order to update it:
 
 cd micronucleus-master/firmware/releases
+
 ~~avrdude -P usb -c usbasp -p t85 -U flash:w:t85_default.hex~~
+
 ~~avrdude -P usb -c usbasp -p t85 -U lfuse:w:0x62:m -U hfuse:w:0xdf:m -U efuse:w:0xfe:m~~
 
 ~~This particular low fuse bit setting uses an internal 8 MHz oscillator with a division by 8 yielding F_CPU = 1000000u.~~
 
-The above lines do not work. **Micronucleus expects 16.5 MHz** → USB signals way too slow → USB device not detected. 
+The above does not work. **Micronucleus expects 16.5 MHz.** Otherwise the USB signals are too slow and the USB device will not be detected. 
 
 Instead:
 
@@ -116,7 +119,7 @@ avrdude -c usbasp -p t85 \
   -U efuse:w:0xfe:m
 ```
 
-Micronucleus requires specific fuses to run USB:
+Micronucleus is tied to specific fuses to run USB:
 
 lfuse = 0xE1 → enable 16 MHz PLL clock, disable CKDIV8.
 
