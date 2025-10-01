@@ -1,12 +1,11 @@
 ## Introduction
 
-MCS Digistump Digispark Attiny 85 is an inexpensive (five-euro) board that has a 16MHz CPU, 8KB RAM (really 6K due to the pre-loaded bootloader-programmer), 8-IO pin ATmega microcontroller with the USB connector, see
-the image below.
+MCS Digistump Digispark Attiny 85 is the cheapest complete MCU board whose (five-euro) price is close to that of the MCU chip (Attiny 85) alone.
 
 ![gThumb](attiny85-dostojevskij.jpg "Digispark ATtiny85")
 
 The problem is that its programming (flashing) [is not as trivial as it should be][why-im-not-using]. Most tutorials involve the [Arduino][bootloader] IDE, 
-but those IDE-centered workflows depend on the IDE version number and are not flexible and portable enough. Here are some notes about programming this chip directly from the Ubuntu 20.04 command line terminal.
+but those IDE-centered workflows depend on the IDE version number and are not flexible and portable enough. Here are some notes about programming this board directly from the Ubuntu 22.04 command line terminal.
 
 ## Flashing Code to MicroController
 
@@ -38,61 +37,100 @@ export PATH=$PATH:/home/tokyo/micronucleus/commandline
 sudo -E env "PATH=$PATH" micronucleus --run main.hex
 ```
 
-4. The main workflow is to run these three commands after plugging in the board to USB:
+4. Workflow:
 
-```console
-make clean
-make
-make install
-```
+    4.1 Once (with USBasp or ISP):
 
-In the included Makefile, ```make install``` runs sudo with the environment PATH borrowed from the user space 
-so that the micronucleus program becomes visible.
+    Flash Micronucleus bootloader t85_default.hex.
 
-The promt issues
+    Set the correct fuse values.
+    
+    This establishes the board as a "Digispark". See 5. Updating Micronucleus.
 
-```console
-> Please plug in the device ...
-```
+    4.2 Afterwards:
 
-and one then needs to unplug and plug the board to USB port again before succeeding:
+    Use Micronucleus over USB to upload code:
+    
+    ```console
+    make clean
+    make
+    make install
+    ```
 
-```console 
-> Device is found!
-connecting: 33% complete
-> Device has firmware version 1.6
-> Available space for user applications: 6012 bytes
-> Suggested sleep time between sending pages: 8ms
-> Whole page count: 94  page size: 64
-> Erase function sleep duration: 752ms
-parsing: 50% complete
-> Erasing the memory ...
-erasing: 66% complete
-> Starting to upload ...
-writing: 83% complete
-> Starting the user app ...
-running: 100% complete
->> Micronucleus done. Thank you!
-```
+    The fuses remain as they were (you don’t touch them again).
 
-Sometimes it is also useful to run ```lsusb``` command to see if the device is seen on the USB port. 
-A sample code is included in this folder, see also [this minimal complete example][minimal-code].
+    In the included Makefile, ```make install``` runs sudo with the environment PATH borrowed from the user space 
+    so that the micronucleus program becomes visible.
 
-![gThumb](attiny85-blinking.jpg "Digispark ATtiny85")
+    The promt issues
+
+    ```console
+    > Please plug in the device ...
+    ```
+
+    and one then needs to unplug and plug the board to USB port again before succeeding:
+
+    ```console 
+    > Device is found!
+    connecting: 33% complete
+    > Device has firmware version 1.6
+    > Available space for user applications: 6012 bytes
+    > Suggested sleep time between sending pages: 8ms
+    > Whole page count: 94  page size: 64
+    > Erase function sleep duration: 752ms
+    parsing: 50% complete
+    > Erasing the memory ...
+    erasing: 66% complete
+    > Starting to upload ...
+    writing: 83% complete
+    > Starting the user app ...
+    running: 100% complete
+    >> Micronucleus done. Thank you!
+    ```
+
+    Sometimes it is also useful to run ```lsusb``` command to see if the device is seen on the USB port. 
+    A sample code is included in this folder, see also [this minimal complete example][minimal-code].
+
+    ![gThumb](attiny85-blinking.jpg "Digispark ATtiny85")
 
 5. Updating Micronucleus
 
 One problem with this board is that in order to update the Micronucleus bootloader, one still needs to wire an external ISP programmer such as USBasp to the corresponding pins MISO, MOSI, SCK and RESET. In order to update it:
 
+cd micronucleus-master/firmware/releases
+~~avrdude -P usb -c usbasp -p t85 -U flash:w:t85_default.hex~~
+~~avrdude -P usb -c usbasp -p t85 -U lfuse:w:0x62:m -U hfuse:w:0xdf:m -U efuse:w:0xfe:m~~
+
+~~This particular low fuse bit setting uses an internal 8 MHz oscillator with a division by 8 yielding F_CPU = 1000000u.~~
+
+The above lines do not work. **Micronucleus expects 16.5 MHz** → USB signals way too slow → USB device not detected. 
+
+Instead:
+
 ```console
 cd micronucleus-master/firmware/releases
-avrdude -P usb -c usbasp -p t85 -U flash:w:t85_default.hex
-avrdude -P usb -c usbasp -p t85 -U lfuse:w:0x62:m -U hfuse:w:0xdf:m -U efuse:w:0xfe:m
+avrdude -c usbasp -p t85 \
+  -U flash:w:t85_default.hex:i \
+  -U lfuse:w:0xe1:m \
+  -U hfuse:w:0xdd:m \
+  -U efuse:w:0xfe:m
 ```
 
-This particular low fuse bit setting uses an internal 8 MHz oscillator with a division by 8 yielding F_CPU = 1000000u. 
+Micronucleus requires specific fuses to run USB:
 
-One should be extremely careful with the fuse bits. There are many ways you can "brick" the device:
+lfuse = 0xE1 → enable 16 MHz PLL clock, disable CKDIV8.
+
+hfuse = 0xDD → keep reset pin enabled, set boot size properly.
+
+efuse = 0xFE → default extended fuse.
+
+**Always set the main clock to 16.5 MHz.**
+
+6. Fuse Bits 
+
+Fuse bits (fuses) = stored in a dedicated NVM area in the chip. Persistent w.r.t. resets and power on/off until explicitly changed. They also determine the CPU clock. `#define F_CPU 16500000UL` inside code/firmware only tells the compiler what we think the clock speed is. Has no effect on hardware, but affects certain functions such as `_delay_ms()`.
+
+One should be extremely careful with the fuse bits. There are many ways to brick the device:
 - Changing the lock bits. Only the omitted (shown above) or the default -U lock:w:0xFF:m is non-locking!
 - High DWEN or RSTDISBL overrides RESET and will thus irreversibly break SPI and the ability to program!
 - SPIEN should be 1, Enable Serial Program and Data Downloading, otherwise no SPI anymore!
@@ -107,8 +145,7 @@ I wish I read the articles [fuse-settings-general-1][fuse-settings-general-1] an
 - [minimal-code]
 - [default-fuse-bits]
 - [datasheet]
-- [fuse-settings-general-1]
-- [fuse-settings-general-2]
+- [fuse-settings-general]
 - [fuse-bit-calculator]
 
 [why-im-not-using]: https://blog.mousetech.com/why-im-not-using-digisparks-attiny85-in-almost-everything/
@@ -121,8 +158,6 @@ I wish I read the articles [fuse-settings-general-1][fuse-settings-general-1] an
 
 [datasheet]: https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf
 
-[fuse-settings-general-1]: http://www.martyncurrey.com/arduino-atmega-328p-fuse-settings/
-
-[fuse-settings-general-2]: http://web.engr.oregonstate.edu/~traylor/ece473/lectures/fuses.pdf
+[fuse-settings-general]: http://www.martyncurrey.com/arduino-atmega-328p-fuse-settings/
 
 [fuse-bit-calculator]: http://eleccelerator.com/fusecalc/fusecalc.php?chip=attiny85
