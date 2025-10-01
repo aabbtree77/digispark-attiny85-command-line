@@ -7,17 +7,13 @@ MCS Digistump Digispark Attiny 85 is the cheapest complete MCU board whose (five
 The problem is that its programming (flashing) [is not as trivial as it should be][why-im-not-using]. Most tutorials involve the [Arduino][bootloader] IDE, 
 but those IDE-centered workflows depend on the IDE version number and are not flexible and portable enough. Here are some notes about programming this board directly from the Ubuntu 22.04 command line terminal.
 
-## Flashing Code to MicroController
-
-The [default setting][default-fuse-bits] is F_CPU=16500000 and all the pins of the port B are set to the output pins, this even includes the reset pin [PB5][datasheet]!
-
-### Install gcc-avr tool chain:
+## Install gcc-avr tool chain:
 
 ```console
 sudo apt-get install gcc build-essential gcc-avr binutils-avr avr-libc gdb-avr avrdude libusb-dev
 ```
 
-### Install micronucleus:
+## Install micronucleus:
 
 ```console
 git clone https://github.com/micronucleus/micronucleus.git
@@ -31,17 +27,15 @@ Add this line to .bashrc (note your path to micronucleus, mine is /home/tokyo/):
 export PATH=$PATH:/home/tokyo/micronucleus/commandline
 ```
 
-### Workflow:
+## Workflow:
 
-#### Once (with USBasp or ISP):
+### Once (with USBasp or ISP):
 
-Flash Micronucleus bootloader t85_default.hex.
+Flash Micronucleus bootloader t85_default.hex, and set the correct fuse values. See Updating Micronucleus for details.
 
-Set the correct fuse values.
+This establishes the board as a "Digispark".
 
-This establishes the board as a "Digispark". See 5. Updating Micronucleus.
-
-#### Afterwards:
+### Afterwards:
 
 Use Micronucleus over USB to upload code:
 
@@ -88,13 +82,13 @@ running: 100% complete
 >> Micronucleus done. Thank you!
 ```
 
-A sample code is included in this folder, see also [this minimal complete example][minimal-code].
+A sample code is included in this folder.
 
 Execute ```lsusb``` to check if the board is still visible on the USB port. If not, update/upload Micronucleus as shown below. 
 
 ![gThumb](attiny85-blinking.jpg "Digispark ATtiny85")
 
-### Updating Micronucleus
+## Updating Micronucleus
 
 One problem with this board is that in order to update Micronucleus (bootloader), one still needs to wire an external ISP programmer such as USBasp to the corresponding pins MISO, MOSI, SCK and RESET. In order to update it:
 
@@ -129,7 +123,7 @@ efuse = 0xFE → default extended fuse.
 
 **Always set the main clock to 16.5 MHz.**
 
-6. Fuse Bits 
+## Fuse Bits 
 
 Fuse bits (fuses) = stored in a dedicated NVM area in the chip. Persistent w.r.t. resets and power on/off until explicitly changed. They also determine the CPU clock. `#define F_CPU 16500000UL` inside code/firmware only tells the compiler what we think the clock speed is. Has no effect on hardware, but affects certain functions such as `_delay_ms()`.
 
@@ -139,13 +133,14 @@ One should be extremely careful with the fuse bits. There are many ways to brick
 - SPIEN should be 1, Enable Serial Program and Data Downloading, otherwise no SPI anymore!
 - SELFPRGEN should be 1 if you want to use micronucleus.
 
+By default, all the pins of the port B are set to the output pins, this even includes the reset pin [PB5][datasheet]!
+
 I wish I read the articles [fuse-settings-general-1][fuse-settings-general-1] and [fuse-settings-general-2][fuse-settings-general-2] earlier.
 
 ## References
 
 - [why-im-not-using]
 - [bootloader]
-- [minimal-code]
 - [default-fuse-bits]
 - [datasheet]
 - [fuse-settings-general]
