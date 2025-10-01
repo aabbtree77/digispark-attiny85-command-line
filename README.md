@@ -135,7 +135,7 @@ One should be extremely careful with the fuse bits. There are many ways to brick
 
 By default, all the pins of the port B are set to the output pins, this even includes the reset pin [PB5][datasheet]!
 
-I wish I read about [the fuse-settings][fuse-settings-general] earlier.
+I wish I read about [fuse settings][fuse settings] earlier.
 
 ## References
 
@@ -143,7 +143,7 @@ I wish I read about [the fuse-settings][fuse-settings-general] earlier.
 - [bootloader]
 - [default-fuse-bits]
 - [datasheet]
-- [fuse-settings-general]
+- [fuse settings]
 - [fuse-bit-calculator]
 
 [why-im-not-using]: https://blog.mousetech.com/why-im-not-using-digisparks-attiny85-in-almost-everything/
@@ -156,6 +156,6 @@ I wish I read about [the fuse-settings][fuse-settings-general] earlier.
 
 [datasheet]: https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf
 
-[fuse-settings-general]: http://www.martyncurrey.com/arduino-atmega-328p-fuse-settings/
+[fuse settings]: http://www.martyncurrey.com/arduino-atmega-328p-fuse-settings/
 
 [fuse-bit-calculator]: http://eleccelerator.com/fusecalc/fusecalc.php?chip=attiny85
