@@ -135,7 +135,7 @@ One should be extremely careful with the fuse bits. There are many ways to brick
 
 By default, all the pins of the port B are set to the output pins, this even includes the reset pin [PB5][datasheet]!
 
-I wish I read the articles [fuse-settings-general-1][fuse-settings-general-1] and [fuse-settings-general-2][fuse-settings-general-2] earlier.
+I wish I read about [the fuse-settings][fuse-settings-general] earlier.
 
 ## References
 
