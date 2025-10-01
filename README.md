@@ -115,7 +115,7 @@ avrdude -c usbasp -p t85 \
 
 Micronucleus is tied to specific fuses to run USB:
 
-lfuse = 0xE1 → enable 16 MHz PLL clock, disable CKDIV8.
+lfuse = 0xE1 → enable 16.5 MHz PLL clock, disable CKDIV8.
 
 hfuse = 0xDD → keep reset pin enabled, set boot size properly.
 
